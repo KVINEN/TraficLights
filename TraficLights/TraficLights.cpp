@@ -146,7 +146,28 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         {
             PAINTSTRUCT ps;
             HDC hdc = BeginPaint(hWnd, &ps);
-            // TODO: Add any drawing code that uses hdc here...
+            
+            HBRUSH hbb = CreateSolidBrush(RGB(0, 0, 0));
+            HGDIOBJ hO = SelectObject(hdc, hbb);
+
+            Rectangle(hdc, 90, 40, 210, 380);
+
+            HBRUSH hbr = CreateSolidBrush(RGB(255, 0, 0));
+            SelectObject(hdc, hbr);
+
+            Ellipse(hdc, 100, 50, 200, 150);
+
+            HBRUSH hby = CreateSolidBrush(RGB(255, 255, 0)); 
+            SelectObject(hdc, hby);
+
+            Ellipse(hdc, 100, 160, 200, 260);
+
+            HBRUSH hbg = CreateSolidBrush(RGB(0, 255, 0));
+            SelectObject(hdc, hbg);
+
+            Ellipse(hdc, 100, 270, 200, 370);
+
+            SelectObject(hdc, hO);
             EndPaint(hWnd, &ps);
         }
         break;
