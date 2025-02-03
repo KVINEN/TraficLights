@@ -148,26 +148,34 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             HDC hdc = BeginPaint(hWnd, &ps);
             
             HBRUSH hbb = CreateSolidBrush(RGB(0, 0, 0));
-            HGDIOBJ hO = SelectObject(hdc, hbb);
+            HGDIOBJ ho = SelectObject(hdc, hbb);
 
             Rectangle(hdc, 90, 40, 210, 380);
+            
+            DeleteObject(hbb);
 
             HBRUSH hbr = CreateSolidBrush(RGB(255, 0, 0));
             SelectObject(hdc, hbr);
 
             Ellipse(hdc, 100, 50, 200, 150);
 
+            DeleteObject(hbr);
+
             HBRUSH hby = CreateSolidBrush(RGB(255, 255, 0)); 
             SelectObject(hdc, hby);
 
             Ellipse(hdc, 100, 160, 200, 260);
+
+            DeleteObject(hby);
 
             HBRUSH hbg = CreateSolidBrush(RGB(0, 255, 0));
             SelectObject(hdc, hbg);
 
             Ellipse(hdc, 100, 270, 200, 370);
 
-            SelectObject(hdc, hO);
+            DeleteObject(hbg);
+
+            SelectObject(hdc, ho);
             EndPaint(hWnd, &ps);
         }
         break;
