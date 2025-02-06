@@ -29,10 +29,13 @@ const COLORREF states[4][3] = {
     {GRAY, YELLOW, GRAY}
 };
 int colorState = 0;
+int colorState2 = 2;
 COLORREF circlecolors[3];
+COLORREF circlecolors2[3];
 
 void UpdateColors() {
     memcpy(circlecolors, states[colorState], sizeof(circlecolors));
+    memcpy(circlecolors2, states[colorState2], sizeof(circlecolors2));
 }
 
 int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
@@ -168,13 +171,26 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             HBRUSH hbb = CreateSolidBrush(RGB(0, 0, 0));
             HGDIOBJ ho = SelectObject(hdc, hbb);
 
-            Rectangle(hdc, 90, 40, 210, 380);
+            Rectangle(hdc, 500, 0, 600, MAXIMUM_ALLOWED);
+            Rectangle(hdc, 0, 200, MAXIMUM_ALLOWED, 300);
+
+            Rectangle(hdc, 440, 80, 470, 170);
+            Rectangle(hdc, 640, 140, 730, 170);
             DeleteObject(hbb);
 
             for (int i = 0; i < 3; i++) {
                 HBRUSH hBrush = CreateSolidBrush(circlecolors[i]);
+                INT offsett = 30;
                 SelectObject(hdc, hBrush);
-                Ellipse(hdc, 100, 50 + (i * 110), 200, 150 + (i * 110));
+                Ellipse(hdc, 440, 80 + (i * offsett), 470, 110 + (i * offsett));
+                DeleteObject(hBrush);
+            }
+
+            for (int i = 0; i < 3; i++) {
+                HBRUSH hBrush = CreateSolidBrush(circlecolors2[i]);
+                INT offsett = 30;
+                SelectObject(hdc, hBrush);
+                Ellipse(hdc, 640 + (i * offsett), 140, 670 + (i * offsett), 170);
                 DeleteObject(hBrush);
             }
 
@@ -184,6 +200,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         break;
     case WM_LBUTTONDOWN:
         colorState = (colorState + 1)%4;
+        colorState2 = (colorState2 + 1) % 4;
         UpdateColors();
         InvalidateRect(hWnd, NULL, TRUE);
         break;
