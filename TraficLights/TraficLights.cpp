@@ -146,6 +146,9 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
     switch (message)
     {
+    case WM_CREATE:
+        SetTimer(hWnd, 0, 1000, 0);
+        break;
     case WM_COMMAND:
         {
             int wmId = LOWORD(wParam);
@@ -203,6 +206,13 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         colorState2 = (colorState2 + 1) % 4;
         UpdateColors();
         InvalidateRect(hWnd, NULL, TRUE);
+        break;
+    case WM_TIMER:
+        colorState = (colorState + 1) % 4;
+        colorState2 = (colorState2 + 1) % 4;
+        UpdateColors();
+        InvalidateRect(hWnd, 0, TRUE);
+        return 0;
         break;
     case WM_DESTROY:
         PostQuitMessage(0);
