@@ -17,36 +17,22 @@ BOOL                InitInstance(HINSTANCE, int);
 LRESULT CALLBACK    WndProc(HWND, UINT, WPARAM, LPARAM);
 INT_PTR CALLBACK    About(HWND, UINT, WPARAM, LPARAM);
 
-COLORREF circleColor[3];
+const COLORREF RED = RGB(255, 0, 0);
+const COLORREF YELLOW = RGB(255, 255, 0);
+const COLORREF GREEN = RGB(0, 255, 0);
+const COLORREF GRAY = RGB(69, 69, 69);
+
+const COLORREF states[4][3] = {
+    {RED, GRAY, GRAY},
+    {RED, YELLOW, GRAY},
+    {GRAY, GRAY, GREEN},
+    {GRAY, YELLOW, GRAY}
+};
 int colorState = 0;
+COLORREF circlecolors[3];
 
 void UpdateColors() {
-    switch (colorState) {
-    case 0:
-        circleColor[0] = RGB(255, 0, 0);
-        circleColor[1] = RGB(69, 69, 69);
-        circleColor[2] = RGB(69, 69, 69);
-        break;
-    case 1:
-        circleColor[0] = RGB(255, 0, 0);
-        circleColor[1] = RGB(255, 255, 0);
-        circleColor[2] = RGB(69, 69, 69);
-        break;
-    case 2:
-        circleColor[0] = RGB(69, 69, 69);
-        circleColor[1] = RGB(69, 69, 69);
-        circleColor[2] = RGB(0, 255, 0);
-        break;
-    case 3:
-        circleColor[0] = RGB(69, 69, 69);
-        circleColor[1] = RGB(255, 255, 0);
-        circleColor[2] = RGB(69, 69, 69);
-        break;
-    default:
-        colorState = 0;
-        UpdateColors();
-        return;
-    }
+    memcpy(circlecolors, states[colorState], sizeof(circlecolors));
 }
 
 int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
@@ -72,8 +58,6 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 
     HACCEL hAccelTable = LoadAccelerators(hInstance, MAKEINTRESOURCE(IDC_TRAFICLIGHTS));
     MSG msg;
-
-    UpdateColors();
 
     // Main message loop:
     while (GetMessage(&msg, nullptr, 0, 0))
@@ -139,7 +123,6 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
    }
 
    UpdateColors();
-
    ShowWindow(hWnd, nCmdShow);
    UpdateWindow(hWnd);
 
@@ -184,30 +167,23 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             
             HBRUSH hbb = CreateSolidBrush(RGB(0, 0, 0));
             HGDIOBJ ho = SelectObject(hdc, hbb);
+
             Rectangle(hdc, 90, 40, 210, 380);
             DeleteObject(hbb);
 
-            HBRUSH hbr = CreateSolidBrush(circleColor[0]);
-            SelectObject(hdc, hbr);
-            Ellipse(hdc, 100, 50, 200, 150);
-            DeleteObject(hbr);
-
-            HBRUSH hby = CreateSolidBrush(circleColor[1]);
-            SelectObject(hdc, hby);
-            Ellipse(hdc, 100, 160, 200, 260);
-            DeleteObject(hby);
-
-            HBRUSH hbg = CreateSolidBrush(circleColor[2]);
-            SelectObject(hdc, hbg);
-            Ellipse(hdc, 100, 270, 200, 370);
-            DeleteObject(hbg);
+            for (int i = 0; i < 3; i++) {
+                HBRUSH hBrush = CreateSolidBrush(circlecolors[i]);
+                SelectObject(hdc, hBrush);
+                Ellipse(hdc, 100, 50 + (i * 110), 200, 150 + (i * 110));
+                DeleteObject(hBrush);
+            }
 
             SelectObject(hdc, ho);
             EndPaint(hWnd, &ps);
         }
         break;
     case WM_LBUTTONDOWN:
-        colorState = (colorState + 1);
+        colorState = (colorState + 1)%4;
         UpdateColors();
         InvalidateRect(hWnd, NULL, TRUE);
         break;
