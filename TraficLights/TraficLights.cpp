@@ -3,6 +3,7 @@
 
 #include "framework.h"
 #include "TraficLights.h"
+#include <vector>
 
 #define MAX_LOADSTRING 100
 
@@ -33,9 +34,61 @@ int colorState2 = 2;
 COLORREF circlecolors[3];
 COLORREF circlecolors2[3];
 
+HBITMAP hCarBitmap = NULL;
+
+struct Car {
+    int x, y;
+    bool isMoving;
+    bool isHorizontal;
+};
+
+std::vector<Car> cars;
+
 void UpdateColors() {
     memcpy(circlecolors, states[colorState], sizeof(circlecolors));
     memcpy(circlecolors2, states[colorState2], sizeof(circlecolors2));
+}
+
+void MoveCars() {
+    const int minDistance = 50;
+
+    for (size_t i = 0; i < cars.size(); i++) {
+        Car& car = cars[i];
+
+        if (car.isHorizontal) {
+            bool canMove = true;
+
+            for (size_t j = 0; j < cars.size(); j++) {
+                if (j != i && cars[j].isHorizontal) {
+                    if (cars[j].x > car.x && (cars[j].x - car.x) < minDistance) {
+                        canMove = false;
+                        break;
+                    }
+                }
+            }
+
+            if (canMove && (car.x < 470 || car.x > 500 || (colorState2 == 2 && car.x < MAXIMUM_ALLOWED))) {
+                car.x += 5;
+            }
+        }
+        
+        else {
+            bool canMove = true;
+
+            for (size_t j = 0; j < cars.size(); j++) {
+                if (j != i && !cars[j].isHorizontal) {
+                    if (cars[j].y > car.y && (cars[j].y - car.y) < minDistance) {
+                        canMove = false;
+                        break;
+                    }
+                }
+            }
+
+            if (canMove && (car.y < 140 || car.y > 170 || (colorState == 2 && car.y < MAXIMUM_ALLOWED))) {
+                car.y += 5;
+            }
+        }
+    }
 }
 
 int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
@@ -125,9 +178,17 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
       return FALSE;
    }
 
+   hCarBitmap = (HBITMAP)LoadImage(NULL, L"car.bmp", IMAGE_BITMAP, 30, 30, LR_LOADFROMFILE);
+   if (!hCarBitmap) {
+       MessageBox(hWnd, L"Failed to load car.bmp", L"Error", MB_OK);
+   }
+
    UpdateColors();
    ShowWindow(hWnd, nCmdShow);
    UpdateWindow(hWnd);
+
+   SetTimer(hWnd, 0, 5000, 0);
+   SetTimer(hWnd, 1, 50, 0);
 
    return TRUE;
 }
@@ -146,9 +207,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
     switch (message)
     {
-    case WM_CREATE:
-        SetTimer(hWnd, 0, 1000, 0);
-        break;
     case WM_COMMAND:
         {
             int wmId = LOWORD(wParam);
@@ -166,6 +224,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             }
         }
         break;
+    case WM_CREATE:
+        break;
     case WM_PAINT:
         {
             PAINTSTRUCT ps;
@@ -176,7 +236,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 
             Rectangle(hdc, 500, 0, 600, MAXIMUM_ALLOWED);
             Rectangle(hdc, 0, 200, MAXIMUM_ALLOWED, 300);
-
             Rectangle(hdc, 440, 80, 470, 170);
             Rectangle(hdc, 640, 140, 730, 170);
             DeleteObject(hbb);
@@ -197,22 +256,37 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
                 DeleteObject(hBrush);
             }
 
+            HDC hdcMem = CreateCompatibleDC(hdc);
+            HBITMAP hbmOld = (HBITMAP)SelectObject(hdcMem, hCarBitmap);
+
+            for (const auto& car : cars) {
+                BitBlt(hdc, car.x, car.y, 30, 30, hdcMem, 0, 0, SRCCOPY);
+            }
+
+            SelectObject(hdcMem, hbmOld);
+            DeleteDC(hdcMem);
             SelectObject(hdc, ho);
             EndPaint(hWnd, &ps);
         }
         break;
     case WM_LBUTTONDOWN:
-        colorState = (colorState + 1)%4;
-        colorState2 = (colorState2 + 1) % 4;
-        UpdateColors();
+        cars.push_back({ 0, 230, true, true });
+        InvalidateRect(hWnd, NULL, TRUE);
+        break;
+    case WM_RBUTTONDOWN:
+        cars.push_back({ 530,0, true,false });
         InvalidateRect(hWnd, NULL, TRUE);
         break;
     case WM_TIMER:
-        colorState = (colorState + 1) % 4;
-        colorState2 = (colorState2 + 1) % 4;
-        UpdateColors();
-        InvalidateRect(hWnd, 0, TRUE);
-        return 0;
+        if (wParam == 0) {
+            colorState = (colorState + 1) % 4;
+            colorState2 = (colorState2 + 1) % 4;
+            UpdateColors();
+        }
+        else if (wParam == 1) {
+            MoveCars();
+        }
+        InvalidateRect(hWnd, NULL, TRUE);
         break;
     case WM_DESTROY:
         PostQuitMessage(0);
