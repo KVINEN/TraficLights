@@ -3,6 +3,7 @@
 
 #include "framework.h"
 #include "TraficLights.h"
+#include <vector>
 
 #define MAX_LOADSTRING 100
 
@@ -32,6 +33,159 @@ int colorState = 0;
 int colorState2 = 2;
 COLORREF circlecolors[3];
 COLORREF circlecolors2[3];
+
+class Bil
+{
+public:
+    Bil(int ileft, int itop, int iright, int ibottom, Bil* start = nullptr) {
+        left = ileft;
+        top = itop;
+        right = iright;
+        bottom = ibottom;
+        neste = start;
+    }
+    ~Bil() {
+        delete neste;
+    }
+
+    void EndreX(int auk) {
+        left = left + auk;
+        right = right + auk;
+    }
+
+    void EndreY(int auk) {
+        top = top + auk;
+        bottom = bottom + auk;
+    }
+
+    void tegn(HDC hdc, COLORREF farge) {
+        HBRUSH midler = CreateSolidBrush(farge);
+        SelectObject(hdc, midler);
+        Rectangle(hdc, left, top, right, bottom);
+        DeleteObject(midler);
+    }
+
+    int getleft() {
+        return left;
+    }
+    int getright() {
+        return right;
+    }
+    int gettop() {
+        return top;
+    }
+    int getbottom() {
+        return bottom;
+    }
+    Bil* getneste() {
+        return neste;
+    }
+    void setneste(Bil* ny) {
+        neste = ny;
+    }
+
+    BOOL vurderOmFornerme(int offset) {
+        return (neste == nullptr) || ((neste->getleft() - offset > right) || (neste->gettop()- offset > bottom));
+    }
+
+private:
+    int left;
+    int top;
+    int right;
+    int bottom;
+    Bil* neste;
+};
+
+class linearBil
+{
+public:
+
+    linearBil() {
+        forste = nullptr;
+        siste = nullptr;
+    }
+
+    linearBil(Bil* start) {
+        forste = start;
+        siste = start;
+    }
+    ~linearBil() {
+        delete forste;
+        delete siste;
+    }
+
+    Bil* getforste() {
+        return forste;
+    }
+
+    void slettS() {
+        Bil* curr2 = forste;
+        Bil* nestS = forste;
+        while (curr2 != nullptr) {
+            if (curr2->getneste() == siste) {
+                nestS = curr2;
+                delete siste;
+                siste = nestS;
+                siste->setneste(nullptr);
+                break;
+            }
+            curr2 = curr2->getneste();
+        }
+    }
+
+    void tegnAlle(HDC hdc) {
+        Bil* curr = forste;
+        int screenWidth = GetSystemMetrics(SM_CXSCREEN);
+        int screenHeight = GetSystemMetrics(SM_CYSCREEN);
+        while (curr != nullptr) {
+
+            if (curr->getleft() >= screenWidth || curr->gettop() >= screenHeight) {
+                slettS();
+                curr = nullptr;
+            }
+            else {
+                curr->tegn(hdc, RGB(255, 0, 0));
+                curr = curr->getneste();
+            }
+        }
+        delete curr;
+    }
+
+    void flyttAlle(int retning, int colorS) {
+        Bil* curr = forste;
+        while (curr != nullptr) {
+            if (curr->vurderOmFornerme(5) && ((colorS != 0 && colorS != 1 ) || ((curr->getright() < 500 || curr->getright() > 510) && (curr->getbottom() < 200 || curr->getbottom() > 210) ) )) {
+                if (retning == 0) {
+                    curr->EndreX(5);
+                }
+                else {
+                    curr->EndreY(5);
+                }
+            }
+            curr = curr->getneste();
+        }
+        delete curr;
+    }
+
+    void leggTil(Bil* ny) {
+        if (forste == nullptr) {
+            forste = ny;
+            siste = ny;
+        }else if (forste == siste) {
+            siste = forste;
+            forste = ny;
+            forste->setneste(siste);
+        }
+        else {
+            ny->setneste(forste);
+            forste = ny;
+        }
+    }
+
+private:
+    Bil* forste;
+    Bil* siste;
+};
 
 void UpdateColors() {
     memcpy(circlecolors, states[colorState], sizeof(circlecolors));
@@ -142,12 +296,17 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 //  WM_DESTROY  - post a quit message and return
 //
 //
+
+linearBil* bilerx = new linearBil();
+linearBil* bilery = new linearBil();
+
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
     switch (message)
     {
     case WM_CREATE:
-        SetTimer(hWnd, 0, 1000, 0);
+        SetTimer(hWnd, 0, 5000, 0);
+        SetTimer(hWnd, 1, 50, 0);
         break;
     case WM_COMMAND:
         {
@@ -170,51 +329,89 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         {
             PAINTSTRUCT ps;
             HDC hdc = BeginPaint(hWnd, &ps);
-            
+
+            int screenWidth = GetSystemMetrics(SM_CXSCREEN);
+            int screenHeight = GetSystemMetrics(SM_CYSCREEN);
+
+            HDC memDC = CreateCompatibleDC(hdc);
+            HBITMAP memBitmap = CreateCompatibleBitmap(hdc, screenWidth, screenHeight);
+            HGDIOBJ oldBitmap = SelectObject(memDC, memBitmap); 
+
+            HBRUSH hBrush = CreateSolidBrush(RGB(255, 255, 255)); // White background
+            RECT rect = { 0, 0, screenWidth, screenHeight };
+            FillRect(memDC, &rect, hBrush);
+            DeleteObject(hBrush);
+
             HBRUSH hbb = CreateSolidBrush(RGB(0, 0, 0));
-            HGDIOBJ ho = SelectObject(hdc, hbb);
+            HGDIOBJ ho = SelectObject(memDC, hbb);
 
-            Rectangle(hdc, 500, 0, 600, MAXIMUM_ALLOWED);
-            Rectangle(hdc, 0, 200, MAXIMUM_ALLOWED, 300);
+            Rectangle(memDC, 500, 0, 600, MAXIMUM_ALLOWED);
+            Rectangle(memDC, 0, 200, MAXIMUM_ALLOWED, 300);
 
-            Rectangle(hdc, 440, 80, 470, 170);
-            Rectangle(hdc, 640, 140, 730, 170);
+            Rectangle(memDC, 440, 80, 470, 170);
+            Rectangle(memDC, 380, 330, 470, 360);
+
+            SelectObject(memDC, ho);
             DeleteObject(hbb);
 
             for (int i = 0; i < 3; i++) {
                 HBRUSH hBrush = CreateSolidBrush(circlecolors[i]);
-                INT offsett = 30;
-                SelectObject(hdc, hBrush);
-                Ellipse(hdc, 440, 80 + (i * offsett), 470, 110 + (i * offsett));
+                int offsett = 30;
+                SelectObject(memDC, hBrush);
+                Ellipse(memDC, 440, 140 - (i * offsett), 470, 170 - (i * offsett));
                 DeleteObject(hBrush);
             }
 
             for (int i = 0; i < 3; i++) {
                 HBRUSH hBrush = CreateSolidBrush(circlecolors2[i]);
-                INT offsett = 30;
-                SelectObject(hdc, hBrush);
-                Ellipse(hdc, 640 + (i * offsett), 140, 670 + (i * offsett), 170);
+                int offsett = 30;
+                SelectObject(memDC, hBrush);
+                Ellipse(memDC, 440 - (i * offsett), 330, 470 - (i * offsett), 360);
                 DeleteObject(hBrush);
             }
 
-            SelectObject(hdc, ho);
-            EndPaint(hWnd, &ps);
+            bilerx->tegnAlle(memDC);
+            bilery->tegnAlle(memDC);
+
+            BitBlt(hdc, 0, 0, screenWidth, screenHeight, memDC, 0, 0, SRCCOPY);
+
+            DeleteDC(memDC);
+            DeleteObject(memBitmap);
         }
         break;
+    case WM_RBUTTONDOWN:
+        bilery->leggTil(new Bil(-50, 225, 0, 275));
+
+        InvalidateRect(hWnd, NULL, FALSE);
+        break;
     case WM_LBUTTONDOWN:
-        colorState = (colorState + 1)%4;
+        /*colorState = (colorState + 1) % 4;
         colorState2 = (colorState2 + 1) % 4;
-        UpdateColors();
-        InvalidateRect(hWnd, NULL, TRUE);
+        UpdateColors();*/
+        
+        bilerx->leggTil(new Bil(525, -50, 575, 0));
+
+        InvalidateRect(hWnd, NULL, FALSE);
         break;
     case WM_TIMER:
-        colorState = (colorState + 1) % 4;
-        colorState2 = (colorState2 + 1) % 4;
-        UpdateColors();
-        InvalidateRect(hWnd, 0, TRUE);
+
+        if (wParam == 0) {
+            colorState = (colorState + 1) % 4;
+            colorState2 = (colorState2 + 1) % 4;
+            UpdateColors();
+            InvalidateRect(hWnd, 0, FALSE);
+        }
+        else if (wParam == 1) {
+            
+            bilery->flyttAlle(0, colorState2);
+            bilerx->flyttAlle(1, colorState);
+            InvalidateRect(hWnd, 0, FALSE);
+        }
         return 0;
         break;
     case WM_DESTROY:
+        DeleteObject(bilerx);
+        DeleteObject(bilery);
         PostQuitMessage(0);
         break;
     default:
