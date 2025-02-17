@@ -49,45 +49,53 @@ void UpdateColors() {
     memcpy(circlecolors2, states[colorState2], sizeof(circlecolors2));
 }
 
-void MoveCars() {
+void MoveCars(HWND hWnd) {
+    RECT rect;
+    GetClientRect(hWnd, &rect);
     const int minDistance = 50;
+    const int WINDOW_WIDTH = rect.right;
+    const int WINDOW_HEIGHT = rect.bottom;
 
-    for (size_t i = 0; i < cars.size(); i++) {
-        Car& car = cars[i];
+        for (size_t i = 0; i < cars.size(); i++) {
+            Car& car = cars[i];
 
-        if (car.isHorizontal) {
-            bool canMove = true;
+            if (car.isHorizontal) {
+                bool canMove = true;
 
-            for (size_t j = 0; j < cars.size(); j++) {
-                if (j != i && cars[j].isHorizontal) {
-                    if (cars[j].x > car.x && (cars[j].x - car.x) < minDistance) {
-                        canMove = false;
-                        break;
+                for (size_t j = 0; j < cars.size(); j++) {
+                    if (j != i && cars[j].isHorizontal) {
+                        if (cars[j].x > car.x && (cars[j].x - car.x) < minDistance) {
+                            canMove = false;
+                            break;
+                        }
                     }
                 }
-            }
 
-            if (canMove && (car.x < 470 || car.x > 500 || (colorState2 == 2 && car.x < MAXIMUM_ALLOWED))) {
-                car.x += 5;
-            }
-        }
-        
-        else {
-            bool canMove = true;
+                if (canMove && (car.x < 470 || car.x > 500 || (colorState2 == 2 && car.x < WINDOW_WIDTH))) {
+                    car.x += 5;
 
-            for (size_t j = 0; j < cars.size(); j++) {
-                if (j != i && !cars[j].isHorizontal) {
-                    if (cars[j].y > car.y && (cars[j].y - car.y) < minDistance) {
-                        canMove = false;
-                        break;
-                    }
                 }
             }
+            else {
+                bool canMove = true;
 
-            if (canMove && (car.y < 140 || car.y > 170 || (colorState == 2 && car.y < MAXIMUM_ALLOWED))) {
-                car.y += 5;
+                for (size_t j = 0; j < cars.size(); j++) {
+                    if (j != i && !cars[j].isHorizontal) {
+                        if (cars[j].y > car.y && (cars[j].y - car.y) < minDistance) {
+                            canMove = false;
+                            break;
+                        }
+                    }
+                }
+
+                if (canMove && (car.y < 140 || car.y > 170 || (colorState == 2 && car.y < WINDOW_HEIGHT))) {
+                    car.y += 5;
+
+                }
             }
-        }
+            cars.erase(std::remove_if(cars.begin(), cars.end(), [&](Car& car) {
+                return (car.x >= WINDOW_WIDTH || car.y >= WINDOW_HEIGHT);
+                }),cars.end());
     }
 }
 
@@ -186,6 +194,7 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
    UpdateColors();
    ShowWindow(hWnd, nCmdShow);
    UpdateWindow(hWnd);
+   MoveCars(hWnd);
 
    SetTimer(hWnd, 0, 5000, 0);
    SetTimer(hWnd, 1, 50, 0);
@@ -237,14 +246,14 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             Rectangle(hdc, 500, 0, 600, MAXIMUM_ALLOWED);
             Rectangle(hdc, 0, 200, MAXIMUM_ALLOWED, 300);
             Rectangle(hdc, 440, 80, 470, 170);
-            Rectangle(hdc, 640, 140, 730, 170);
+            Rectangle(hdc, 380, 330, 470, 360);
             DeleteObject(hbb);
 
             for (int i = 0; i < 3; i++) {
                 HBRUSH hBrush = CreateSolidBrush(circlecolors[i]);
                 INT offsett = 30;
                 SelectObject(hdc, hBrush);
-                Ellipse(hdc, 440, 80 + (i * offsett), 470, 110 + (i * offsett));
+                Ellipse(hdc, 440, 140 - (i * offsett), 470, 170 - (i * offsett));
                 DeleteObject(hBrush);
             }
 
@@ -252,7 +261,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
                 HBRUSH hBrush = CreateSolidBrush(circlecolors2[i]);
                 INT offsett = 30;
                 SelectObject(hdc, hBrush);
-                Ellipse(hdc, 640 + (i * offsett), 140, 670 + (i * offsett), 170);
+                Ellipse(hdc, 440 - (i * offsett), 330, 470 - (i * offsett), 360);
                 DeleteObject(hBrush);
             }
 
@@ -270,11 +279,11 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         }
         break;
     case WM_LBUTTONDOWN:
-        cars.push_back({ 0, 230, true, true });
+        cars.push_back({ -30, 230, true, true });
         InvalidateRect(hWnd, NULL, TRUE);
         break;
     case WM_RBUTTONDOWN:
-        cars.push_back({ 530,0, true,false });
+        cars.push_back({ 530, -30, true,false });
         InvalidateRect(hWnd, NULL, TRUE);
         break;
     case WM_TIMER:
@@ -284,7 +293,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             UpdateColors();
         }
         else if (wParam == 1) {
-            MoveCars();
+            MoveCars(hWnd);
         }
         InvalidateRect(hWnd, NULL, TRUE);
         break;
