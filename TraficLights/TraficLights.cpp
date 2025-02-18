@@ -4,6 +4,7 @@
 #include "framework.h"
 #include "TraficLights.h"
 #include <vector>
+#include <ctime>
 
 #define MAX_LOADSTRING 100
 
@@ -33,6 +34,8 @@ int colorState = 0;
 int colorState2 = 2;
 COLORREF circlecolors[3];
 COLORREF circlecolors2[3];
+double pw = 0.5;
+double pn = 0.5;
 
 HBITMAP hCarBitmap = NULL;
 
@@ -196,8 +199,10 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
    UpdateWindow(hWnd);
    MoveCars(hWnd);
 
-   SetTimer(hWnd, 0, 5000, 0);
-   SetTimer(hWnd, 1, 50, 0);
+   SetTimer(hWnd, 0, 5000, NULL);
+   SetTimer(hWnd, 1, 50, NULL);
+   SetTimer(hWnd, 2, 1000, NULL);
+   
 
    return TRUE;
 }
@@ -278,13 +283,21 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             EndPaint(hWnd, &ps);
         }
         break;
-    case WM_LBUTTONDOWN:
-        cars.push_back({ -30, 230, true, true });
-        InvalidateRect(hWnd, NULL, TRUE);
-        break;
-    case WM_RBUTTONDOWN:
-        cars.push_back({ 530, -30, true,false });
-        InvalidateRect(hWnd, NULL, TRUE);
+    case WM_KEYDOWN:
+        switch (wParam) {
+        case VK_RIGHT:
+            pw = min(1.0, pw * 1.1);
+            break;
+        case VK_LEFT:
+            pw = min(0.1, pw * 0.9);
+            break;
+        case VK_UP:
+            pn = min(1.0, pn * 1.1);
+            break;
+        case VK_DOWN:
+            pn = min(0.1, pn * 0.9);
+            break;
+        }
         break;
     case WM_TIMER:
         if (wParam == 0) {
@@ -294,6 +307,14 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         }
         else if (wParam == 1) {
             MoveCars(hWnd);
+        }
+        else if (wParam == 2) {
+            if ((double)rand() / RAND_MAX < pw) {
+                cars.push_back({ -30, 230, true, true });
+            }
+            if ((double)rand() / RAND_MAX < pn) {
+                cars.push_back({ 530, -30, true, false });
+            }
         }
         InvalidateRect(hWnd, NULL, TRUE);
         break;
