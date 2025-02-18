@@ -241,48 +241,62 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
     case WM_CREATE:
         break;
     case WM_PAINT:
-        {
-            PAINTSTRUCT ps;
-            HDC hdc = BeginPaint(hWnd, &ps);
-            
-            HBRUSH hbb = CreateSolidBrush(RGB(0, 0, 0));
-            HGDIOBJ ho = SelectObject(hdc, hbb);
+    {
+        PAINTSTRUCT ps;
+        HDC hdc = BeginPaint(hWnd, &ps);
 
-            Rectangle(hdc, 500, 0, 600, MAXIMUM_ALLOWED);
-            Rectangle(hdc, 0, 200, MAXIMUM_ALLOWED, 300);
-            Rectangle(hdc, 440, 80, 470, 170);
-            Rectangle(hdc, 380, 330, 470, 360);
-            DeleteObject(hbb);
+        RECT rect;
+        GetClientRect(hWnd, &rect);
 
-            for (int i = 0; i < 3; i++) {
-                HBRUSH hBrush = CreateSolidBrush(circlecolors[i]);
-                INT offsett = 30;
-                SelectObject(hdc, hBrush);
-                Ellipse(hdc, 440, 140 - (i * offsett), 470, 170 - (i * offsett));
-                DeleteObject(hBrush);
-            }
+        HDC hdcMem = CreateCompatibleDC(hdc);
+        HBITMAP hbmMem = CreateCompatibleBitmap(hdc, rect.right, rect.bottom);
+        HBITMAP hbmOld = (HBITMAP)SelectObject(hdcMem, hbmMem);
 
-            for (int i = 0; i < 3; i++) {
-                HBRUSH hBrush = CreateSolidBrush(circlecolors2[i]);
-                INT offsett = 30;
-                SelectObject(hdc, hBrush);
-                Ellipse(hdc, 440 - (i * offsett), 330, 470 - (i * offsett), 360);
-                DeleteObject(hBrush);
-            }
+        HBRUSH hbb = CreateSolidBrush(RGB(255, 255, 255));
+        FillRect(hdcMem, &rect, hbb);
+        DeleteObject(hbb);
 
-            HDC hdcMem = CreateCompatibleDC(hdc);
-            HBITMAP hbmOld = (HBITMAP)SelectObject(hdcMem, hCarBitmap);
+        HBRUSH hRoadBrush = CreateSolidBrush(RGB(50, 50, 50));
+        SelectObject(hdcMem, hRoadBrush);
+        Rectangle(hdcMem, 500, 0, 600, rect.bottom);
+        Rectangle(hdcMem, 0, 200, rect.right, 300);
+        Rectangle(hdcMem, 440, 80, 470, 170);
+        Rectangle(hdcMem, 380, 330, 470, 360);
+        DeleteObject(hRoadBrush);
 
-            for (const auto& car : cars) {
-                BitBlt(hdc, car.x, car.y, 30, 30, hdcMem, 0, 0, SRCCOPY);
-            }
-
-            SelectObject(hdcMem, hbmOld);
-            DeleteDC(hdcMem);
-            SelectObject(hdc, ho);
-            EndPaint(hWnd, &ps);
+        for (int i = 0; i < 3; i++) {
+            HBRUSH hBrush = CreateSolidBrush(circlecolors[i]);
+            SelectObject(hdcMem, hBrush);
+            Ellipse(hdcMem, 440, 140 - (i * 30), 470, 170 - (i * 30));
+            DeleteObject(hBrush);
         }
-        break;
+
+        for (int i = 0; i < 3; i++) {
+            HBRUSH hBrush = CreateSolidBrush(circlecolors2[i]);
+            SelectObject(hdcMem, hBrush);
+            Ellipse(hdcMem, 440 - (i * 30), 330, 470 - (i * 30), 360);
+            DeleteObject(hBrush);
+        }
+
+        HDC hdcCar = CreateCompatibleDC(hdcMem);
+        HBITMAP hbmOldCar = (HBITMAP)SelectObject(hdcCar, hCarBitmap);
+
+        for (const auto& car : cars) {
+            BitBlt(hdcMem, car.x, car.y, 30, 30, hdcCar, 0, 0, SRCCOPY);
+        }
+
+        SelectObject(hdcCar, hbmOldCar);
+        DeleteDC(hdcCar);
+
+        BitBlt(hdc, 0, 0, rect.right, rect.bottom, hdcMem, 0, 0, SRCCOPY);
+
+        SelectObject(hdcMem, hbmOld);
+        DeleteObject(hbmMem);
+        DeleteDC(hdcMem);
+
+        EndPaint(hWnd, &ps);
+    }
+    break;
     case WM_KEYDOWN:
         switch (wParam) {
         case VK_RIGHT:
@@ -316,7 +330,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
                 cars.push_back({ 530, -30, true, false });
             }
         }
-        InvalidateRect(hWnd, NULL, TRUE);
+        InvalidateRect(hWnd, NULL, FALSE);
         break;
     case WM_DESTROY:
         PostQuitMessage(0);
