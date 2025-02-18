@@ -85,7 +85,7 @@ public:
     }
 
     BOOL vurderOmFornerme(int offset) {
-        return (neste == nullptr) || ((neste->getleft() - offset > right) || (neste->gettop()- offset > bottom));
+        return (neste == nullptr) || ((neste->getleft() - offset > right) || (neste->gettop() - offset > bottom));
     }
 
 private:
@@ -99,19 +99,15 @@ private:
 class linearBil
 {
 public:
+    linearBil() : forste(nullptr), siste(nullptr) {}
 
-    linearBil() {
-        forste = nullptr;
-        siste = nullptr;
-    }
-
-    linearBil(Bil* start) {
-        forste = start;
-        siste = start;
-    }
     ~linearBil() {
-        delete forste;
-        delete siste;
+        Bil* curr = forste;
+        while (curr != nullptr) {
+            Bil* temp = curr;
+            curr = curr->getneste();
+            delete temp;
+        }
     }
 
     Bil* getforste() {
@@ -119,18 +115,22 @@ public:
     }
 
     void slettS() {
-        Bil* curr2 = forste;
-        Bil* nestS = forste;
-        while (curr2 != nullptr) {
-            if (curr2->getneste() == siste) {
-                nestS = curr2;
-                delete siste;
-                siste = nestS;
-                siste->setneste(nullptr);
-                break;
-            }
-            curr2 = curr2->getneste();
+        if (forste == nullptr || siste == nullptr) return;
+
+        if (forste == siste) {
+            delete forste;
+            forste = siste = nullptr;
+            return;
         }
+
+        Bil* curr = forste;
+        while (curr->getneste() != siste) {
+            curr = curr->getneste();
+        }
+
+        delete siste;
+        curr->setneste(nullptr);
+        siste = curr;
     }
 
     void tegnAlle(HDC hdc) {
@@ -138,7 +138,6 @@ public:
         int screenWidth = GetSystemMetrics(SM_CXSCREEN);
         int screenHeight = GetSystemMetrics(SM_CYSCREEN);
         while (curr != nullptr) {
-
             if (curr->getleft() >= screenWidth || curr->gettop() >= screenHeight) {
                 slettS();
                 curr = nullptr;
@@ -148,13 +147,12 @@ public:
                 curr = curr->getneste();
             }
         }
-        delete curr;
     }
 
     void flyttAlle(int retning, int colorS) {
         Bil* curr = forste;
         while (curr != nullptr) {
-            if (curr->vurderOmFornerme(5) && ((colorS != 0 && colorS != 1 ) || ((curr->getright() < 500 || curr->getright() > 510) && (curr->getbottom() < 200 || curr->getbottom() > 210) ) )) {
+            if (curr->vurderOmFornerme(5) && ((colorS == 2) || ((curr->getright() < 500 || curr->getright() > 510) && (curr->getbottom() < 200 || curr->getbottom() > 210)))) {
                 if (retning == 0) {
                     curr->EndreX(5);
                 }
@@ -164,14 +162,14 @@ public:
             }
             curr = curr->getneste();
         }
-        delete curr;
     }
 
     void leggTil(Bil* ny) {
         if (forste == nullptr) {
             forste = ny;
             siste = ny;
-        }else if (forste == siste) {
+        }
+        else if (forste == siste) {
             siste = forste;
             forste = ny;
             forste->setneste(siste);
@@ -299,6 +297,8 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 
 linearBil* bilerx = new linearBil();
 linearBil* bilery = new linearBil();
+int pw = 5;
+int pn = 5;
 
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
@@ -307,6 +307,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
     case WM_CREATE:
         SetTimer(hWnd, 0, 5000, 0);
         SetTimer(hWnd, 1, 50, 0);
+        SetTimer(hWnd, 2, 1000, 0);
         break;
     case WM_COMMAND:
         {
@@ -337,10 +338,11 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             HBITMAP memBitmap = CreateCompatibleBitmap(hdc, screenWidth, screenHeight);
             HGDIOBJ oldBitmap = SelectObject(memDC, memBitmap); 
 
-            HBRUSH hBrush = CreateSolidBrush(RGB(255, 255, 255)); // White background
+            HBRUSH hBrush = CreateSolidBrush(RGB(255, 255, 255));
             RECT rect = { 0, 0, screenWidth, screenHeight };
             FillRect(memDC, &rect, hBrush);
             DeleteObject(hBrush);
+            DeleteObject(&rect);
 
             HBRUSH hbb = CreateSolidBrush(RGB(0, 0, 0));
             HGDIOBJ ho = SelectObject(memDC, hbb);
@@ -374,22 +376,32 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             bilery->tegnAlle(memDC);
 
             BitBlt(hdc, 0, 0, screenWidth, screenHeight, memDC, 0, 0, SRCCOPY);
-
+            
+            SelectObject(memDC, oldBitmap);
             DeleteDC(memDC);
             DeleteObject(memBitmap);
         }
         break;
-    case WM_RBUTTONDOWN:
-        bilery->leggTil(new Bil(-50, 225, 0, 275));
-
-        InvalidateRect(hWnd, NULL, FALSE);
-        break;
+    case WM_KEYDOWN:
+        if (wParam == VK_UP && pn != 100 ){
+            pn = pn + 10;
+        }
+        if (wParam == VK_DOWN && pn != 0) {
+            pn = pn - 10;
+        }
+        if (wParam == VK_LEFT && pw != 0) {
+            pw = pw - 10;
+        }
+        if (wParam == VK_RIGHT && pw != 100) {
+            pw = pw + 10;
+        }
+            break;
     case WM_LBUTTONDOWN:
         /*colorState = (colorState + 1) % 4;
         colorState2 = (colorState2 + 1) % 4;
         UpdateColors();*/
         
-        bilerx->leggTil(new Bil(525, -50, 575, 0));
+        /*bilerx->leggTil(new Bil(525, -50, 575, 0));*/
 
         InvalidateRect(hWnd, NULL, FALSE);
         break;
@@ -402,16 +414,24 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             InvalidateRect(hWnd, 0, FALSE);
         }
         else if (wParam == 1) {
-            
             bilery->flyttAlle(0, colorState2);
             bilerx->flyttAlle(1, colorState);
             InvalidateRect(hWnd, 0, FALSE);
         }
+        else if (wParam == 2) {
+            if ((rand() % 100) < pw) {
+                bilery->leggTil(new Bil(-50, 225, 0, 275));
+            }
+
+            if ((rand() % 100) < pn) {
+                bilerx->leggTil(new Bil(525, -50, 575, 0));
+            }
+        }
         return 0;
         break;
     case WM_DESTROY:
-        DeleteObject(bilerx);
-        DeleteObject(bilery);
+        delete bilerx;
+        delete bilery;
         PostQuitMessage(0);
         break;
     default:
