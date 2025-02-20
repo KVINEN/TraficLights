@@ -327,61 +327,59 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         }
         break;
     case WM_PAINT:
-        {
-            PAINTSTRUCT ps;
-            HDC hdc = BeginPaint(hWnd, &ps);
+    {
+        PAINTSTRUCT ps;
+        HDC hdc = BeginPaint(hWnd, &ps);
 
-            int screenWidth = GetSystemMetrics(SM_CXSCREEN);
-            int screenHeight = GetSystemMetrics(SM_CYSCREEN);
+        int screenWidth = GetSystemMetrics(SM_CXSCREEN);
+        int screenHeight = GetSystemMetrics(SM_CYSCREEN);
 
-            HDC memDC = CreateCompatibleDC(hdc);
-            HBITMAP memBitmap = CreateCompatibleBitmap(hdc, screenWidth, screenHeight);
-            HGDIOBJ oldBitmap = SelectObject(memDC, memBitmap); 
+        HDC memDC = CreateCompatibleDC(hdc);
+        HBITMAP memBitmap = CreateCompatibleBitmap(hdc, screenWidth, screenHeight);
+        HGDIOBJ oldBitmap = SelectObject(memDC, memBitmap);
 
-            HBRUSH hBrush = CreateSolidBrush(RGB(255, 255, 255));
-            RECT rect = { 0, 0, screenWidth, screenHeight };
-            FillRect(memDC, &rect, hBrush);
+        HBRUSH hBrush = CreateSolidBrush(RGB(255, 255, 255));
+        RECT rect = { 0, 0, screenWidth, screenHeight };
+        FillRect(memDC, &rect, hBrush);
+        DeleteObject(hBrush);
+
+        HBRUSH hbb = CreateSolidBrush(RGB(0, 0, 0));
+        HGDIOBJ ho = SelectObject(memDC, hbb);
+        Rectangle(memDC, 500, 0, 600, MAXIMUM_ALLOWED);
+        Rectangle(memDC, 0, 200, MAXIMUM_ALLOWED, 300);
+        Rectangle(memDC, 440, 80, 470, 170);
+        Rectangle(memDC, 380, 330, 470, 360);
+        SelectObject(memDC, ho);
+        DeleteObject(hbb);
+
+        for (int i = 0; i < 3; i++) {
+            HBRUSH hBrush = CreateSolidBrush(circlecolors[i]);
+            int offsett = 30;
+            SelectObject(memDC, hBrush);
+            Ellipse(memDC, 440, 140 - (i * offsett), 470, 170 - (i * offsett));
             DeleteObject(hBrush);
-            DeleteObject(&rect);
-
-            HBRUSH hbb = CreateSolidBrush(RGB(0, 0, 0));
-            HGDIOBJ ho = SelectObject(memDC, hbb);
-
-            Rectangle(memDC, 500, 0, 600, MAXIMUM_ALLOWED);
-            Rectangle(memDC, 0, 200, MAXIMUM_ALLOWED, 300);
-
-            Rectangle(memDC, 440, 80, 470, 170);
-            Rectangle(memDC, 380, 330, 470, 360);
-
-            SelectObject(memDC, ho);
-            DeleteObject(hbb);
-
-            for (int i = 0; i < 3; i++) {
-                HBRUSH hBrush = CreateSolidBrush(circlecolors[i]);
-                int offsett = 30;
-                SelectObject(memDC, hBrush);
-                Ellipse(memDC, 440, 140 - (i * offsett), 470, 170 - (i * offsett));
-                DeleteObject(hBrush);
-            }
-
-            for (int i = 0; i < 3; i++) {
-                HBRUSH hBrush = CreateSolidBrush(circlecolors2[i]);
-                int offsett = 30;
-                SelectObject(memDC, hBrush);
-                Ellipse(memDC, 440 - (i * offsett), 330, 470 - (i * offsett), 360);
-                DeleteObject(hBrush);
-            }
-
-            bilerx->tegnAlle(memDC);
-            bilery->tegnAlle(memDC);
-
-            BitBlt(hdc, 0, 0, screenWidth, screenHeight, memDC, 0, 0, SRCCOPY);
-            
-            SelectObject(memDC, oldBitmap);
-            DeleteDC(memDC);
-            DeleteObject(memBitmap);
         }
-        break;
+
+        for (int i = 0; i < 3; i++) {
+            HBRUSH hBrush = CreateSolidBrush(circlecolors2[i]);
+            int offsett = 30;
+            SelectObject(memDC, hBrush);
+            Ellipse(memDC, 440 - (i * offsett), 330, 470 - (i * offsett), 360);
+            DeleteObject(hBrush);
+        }
+
+        bilerx->tegnAlle(memDC);
+        bilery->tegnAlle(memDC);
+
+        BitBlt(hdc, 0, 0, screenWidth, screenHeight, memDC, 0, 0, SRCCOPY);
+
+        SelectObject(memDC, oldBitmap);
+        DeleteDC(memDC);
+        DeleteObject(memBitmap);
+
+        EndPaint(hWnd, &ps);
+    }
+    break;
     case WM_KEYDOWN:
         if (wParam == VK_UP && pn != 100 ){
             pn = pn + 10;
@@ -430,8 +428,17 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         return 0;
         break;
     case WM_DESTROY:
-        delete bilerx;
-        delete bilery;
+        KillTimer(hWnd, 0);
+        KillTimer(hWnd, 1);
+        KillTimer(hWnd, 2);
+        if (bilerx) {
+            delete bilerx;
+            bilerx = nullptr;
+        }
+        if (bilery) {
+            delete bilery;
+            bilery = nullptr;
+        }
         PostQuitMessage(0);
         break;
     default:
